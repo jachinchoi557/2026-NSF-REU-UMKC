@@ -1,13 +1,11 @@
 import gymnasium as gym
 import gymnasium_robotics
 from gymnasium.wrappers import RecordEpisodeStatistics
-import logging
 import pandas as pd
 
 results = []
 
 num_training_episodes = 100
-logging.basicConfig(level=logging.INFO, format="%(message)s")
 env = gym.make("FetchReach-v4", render_mode="human")
 
 # Logging 
