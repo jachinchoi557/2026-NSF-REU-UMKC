@@ -1,10 +1,12 @@
 REMINDER: use conda activate reu_robotics before executing anything
 
 Research Question ideas:
-  Priority: Camera/image data - Attackers could use these for reconnaissance for future attacks
+     Priority: 
+  
+            Camera/image data - Attackers could use these for reconnaissance for future attacks
            
             Human-Robot interaction - More data for reconnaissance
-            
+      
             Location traces - Data
             
             System Access Logs - Access can lead to attacks
