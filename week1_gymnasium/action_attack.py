@@ -2,7 +2,8 @@ import gymnasium as gym
 import gymnasium_robotics
 import numpy as np
 
-env = gym.make("FetchReach-v4")
+env = gym.make("FetchReach-v4", render_mode="human")
+
 obs, info = env.reset(seed=2)
 
 for step in range(100):
