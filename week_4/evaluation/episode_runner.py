@@ -139,12 +139,20 @@ def run_episode(
             action = policy_fn(env, policy_obs)
         elif method == "random":
             action = random_policy(env, policy_obs)
-        elif method == "rule_based" or method.endswith("_recovery"):
+        elif method == "rule_based":
             action = rule_based_reach_policy(env, policy_obs)
         elif method in {"sac", "sac_her", "recovery_aware_sac_her"} and model is not None:
             action, _ = model.predict(policy_obs, deterministic=True)
         else:
-            action = rule_based_reach_policy(env, policy_obs)
+            base = method.removesuffix("_recovery")
+            if base == "random":
+                action = random_policy(env, policy_obs)
+            elif base == "rule_based":
+                action = rule_based_reach_policy(env, policy_obs)
+            elif base in {"sac", "sac_her"} and model is not None:
+                action, _ = model.predict(policy_obs, deterministic=True)
+            else:
+                action = rule_based_reach_policy(env, policy_obs)
 
         intended_action = np.asarray(action, dtype=np.float32).copy()
 
