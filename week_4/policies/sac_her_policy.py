@@ -7,7 +7,6 @@ random policies so episode_runner can treat all policies uniformly:
     action = policy(env, obs)
 
 Usage
------
     from stable_baselines3 import SAC
     from policies.sac_her_policy import SACHerPolicy
 
@@ -15,7 +14,6 @@ Usage
     policy = SACHerPolicy(model)
     action = policy(env, obs)
 """
-
 from typing import Dict
 import numpy as np
 

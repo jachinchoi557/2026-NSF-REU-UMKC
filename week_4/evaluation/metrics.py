@@ -1,45 +1,46 @@
 """
 TAIRO metric computation — summary statistics and trustworthiness scores.
 
-TAIRO Trustworthiness Criteria (C1–C5)
----------------------------------------
-C1  Reliability          — Does the robot succeed under its operating condition?
-C2  Robustness           — How well does performance hold under disturbances?
-C3  Cybersecurity        — How well does the robot resist adversarial attacks?
-    Resilience
-C4  Safety               — Does the robot avoid unsafe actuator behaviour?
-C5  Recovery             — Does the robot detect and correct attack-induced drift?
+Metric fields produced by add_trustworthiness_scores()
+-------------------------------------------------------
+reliability_score     — Does the robot succeed under its operating condition?
+robustness_score      — How well does performance hold under disturbances?
+cyber_resilience_score— How well does the robot resist adversarial attacks?
+safety_score          — Does the robot avoid unsafe actuator behaviour?
+recovery_score        — Does the robot detect and correct attack-induced drift?
 
-Weight rationale
-----------------
-Reliability (C1) is weighted highest because a robot that cannot complete
-its task provides no value regardless of other properties.
-Cybersecurity (C3) receives equal weight to robustness because the TAIRO
-framework specifically targets adversarial threat models.
-Recovery (C5) is slightly lower because it only matters under attack
-conditions — clean-condition episodes get recovery = 1.0 by convention.
+These names are intentionally distinct from the project's TAIRO framework
+component labels (C1–C6 defined in Week 3) to avoid a naming collision.
+The C1–C6 component labels refer to pipeline modules; the fields here are
+outcome metrics rolled up into the C6 trustworthiness aggregate.
 
-Adjust WEIGHT_* constants to match the final TAIRO paper weighting.
+Weight rationale (matches Week 3 framework component weights C1–C5 in order)
+-----------------------------------------------------------------------------
+C1 Perception & State Understanding      → reliability_score      0.10
+C2 Uncertainty & Failure Detection       → robustness_score       0.25
+C3 Cybersecurity-Aware Reasoning         → cyber_resilience_score 0.25
+C4 RL-Based Adaptation                   → safety_score           0.05
+C5 Failure Recovery & Safety Control     → recovery_score         0.35
 """
 
 import numpy as np
 import pandas as pd
 
 # ---------------------------------------------------------------------------
-# TAIRO C1-C5 trustworthiness weights  (must sum to 1.0)
+# Trustworthiness weights — match Week 3 TAIRO framework C1–C5 (must sum 1.0)
 # ---------------------------------------------------------------------------
-WEIGHT_C1_RELIABILITY = 0.30
-WEIGHT_C2_ROBUSTNESS = 0.20
-WEIGHT_C3_CYBER_RESILIENCE = 0.20
-WEIGHT_C4_SAFETY = 0.15
-WEIGHT_C5_RECOVERY = 0.15
+WEIGHT_RELIABILITY = 0.10
+WEIGHT_ROBUSTNESS = 0.25
+WEIGHT_CYBER_RESILIENCE = 0.25
+WEIGHT_SAFETY = 0.05
+WEIGHT_RECOVERY = 0.35
 
 assert abs(
-    WEIGHT_C1_RELIABILITY
-    + WEIGHT_C2_ROBUSTNESS
-    + WEIGHT_C3_CYBER_RESILIENCE
-    + WEIGHT_C4_SAFETY
-    + WEIGHT_C5_RECOVERY
+    WEIGHT_RELIABILITY
+    + WEIGHT_ROBUSTNESS
+    + WEIGHT_CYBER_RESILIENCE
+    + WEIGHT_SAFETY
+    + WEIGHT_RECOVERY
     - 1.0
 ) < 1e-9, "TAIRO trustworthiness weights must sum to 1.0"
 
@@ -112,34 +113,34 @@ def add_trustworthiness_scores(summary: pd.DataFrame) -> pd.DataFrame:
     """
     out = summary.copy()
 
-    # C1 — Reliability
-    out["c1_reliability"] = out["success_rate"].clip(0.0, 1.0)
+    # Reliability — maps to framework C1 (Perception & State Understanding)
+    out["reliability_score"] = out["success_rate"].clip(0.0, 1.0)
 
-    # C2 — Robustness: normalise distance and smoothness to [0, 1] then invert
+    # Robustness — maps to framework C2 (Uncertainty & Failure Detection)
     max_dist = max(out["final_distance"].max(), 1e-9)
     max_smooth = max(out["action_smoothness"].max(), 1e-9)
 
     distance_score = 1.0 - (out["final_distance"] / max_dist)
     smoothness_score = 1.0 - (out["action_smoothness"] / max_smooth)
-    out["c2_robustness"] = (0.6 * distance_score + 0.4 * smoothness_score).clip(0.0, 1.0)
+    out["robustness_score"] = (0.6 * distance_score + 0.4 * smoothness_score).clip(0.0, 1.0)
 
-    # C3 — Cybersecurity Resilience
-    out["c3_cyber_resilience"] = out["success_rate"].clip(0.0, 1.0)
+    # Cyber resilience — maps to framework C3 (Cybersecurity-Aware Reasoning)
+    out["cyber_resilience_score"] = out["success_rate"].clip(0.0, 1.0)
 
-    # C4 — Safety
-    out["c4_safety"] = (1.0 - out["safety_violation_rate"]).clip(0.0, 1.0)
+    # Safety — maps to framework C4 (RL-Based Adaptation)
+    out["safety_score"] = (1.0 - out["safety_violation_rate"]).clip(0.0, 1.0)
 
-    # C5 — Recovery
-    out["c5_recovery"] = out["recovery_rate"].clip(0.0, 1.0)
-    out.loc[out["condition"] == "clean", "c5_recovery"] = 1.0
+    # Recovery — maps to framework C5 (Failure Recovery & Safety Control)
+    out["recovery_score"] = out["recovery_rate"].clip(0.0, 1.0)
+    out.loc[out["condition"] == "clean", "recovery_score"] = 1.0
 
-    # Composite trustworthiness score
+    # Composite trustworthiness score (C6 aggregate)
     out["trustworthiness_score"] = (
-        WEIGHT_C1_RELIABILITY * out["c1_reliability"]
-        + WEIGHT_C2_ROBUSTNESS * out["c2_robustness"]
-        + WEIGHT_C3_CYBER_RESILIENCE * out["c3_cyber_resilience"]
-        + WEIGHT_C4_SAFETY * out["c4_safety"]
-        + WEIGHT_C5_RECOVERY * out["c5_recovery"]
+        WEIGHT_RELIABILITY * out["reliability_score"]
+        + WEIGHT_ROBUSTNESS * out["robustness_score"]
+        + WEIGHT_CYBER_RESILIENCE * out["cyber_resilience_score"]
+        + WEIGHT_SAFETY * out["safety_score"]
+        + WEIGHT_RECOVERY * out["recovery_score"]
     )
 
     return out

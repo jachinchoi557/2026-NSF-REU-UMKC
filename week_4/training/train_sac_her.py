@@ -85,6 +85,8 @@ def train_sac_her(
 
     env = make_env(seed=seed)
 
+    tb_log_dir = os.path.join(RESULT_DIR, "tb_logs")
+
     model = SAC(
         policy="MultiInputPolicy",
         env=env,
@@ -100,6 +102,7 @@ def train_sac_her(
         batch_size=batch_size,
         gamma=gamma,
         tau=tau,
+        tensorboard_log=tb_log_dir,
     )
 
     model.learn(total_timesteps=total_timesteps)
@@ -179,3 +182,20 @@ def evaluate_trained_model(
     print(f"Saved: {step_path}")
 
     return episode_df, step_df
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Train SAC+HER on FetchReach-v4.")
+    parser.add_argument("--total-timesteps", type=int, default=10_000)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--save-path", type=str, default=None)
+    args = parser.parse_args()
+
+    model = train_sac_her(
+        total_timesteps=args.total_timesteps,
+        seed=args.seed,
+        save_path=args.save_path,
+    )
+    print(f"Training complete. Model saved to: {model.logger.dir if hasattr(model, 'logger') else args.save_path}")

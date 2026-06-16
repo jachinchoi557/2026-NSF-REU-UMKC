@@ -111,7 +111,10 @@ def load_model(model_path: str):
         return None
     try:
         from stable_baselines3 import SAC
-        model = SAC.load(model_path)
+        # HerReplayBuffer requires an env at load time to reconstruct the buffer.
+        env = make_env(seed=0)
+        model = SAC.load(model_path, env=env)
+        env.close()
         print(f"Loaded model from: {model_path}")
         return model
     except Exception as exc:
@@ -202,19 +205,49 @@ def run_benchmark(
     summary_df = summarize_results(episode_df)
     score_df = add_trustworthiness_scores(summary_df)
 
-    # Save outputs
-    ep_path = os.path.join(output_dir, "tairo_fetchreach_episode_results.csv")
-    step_path = os.path.join(output_dir, "tairo_fetchreach_step_logs.csv")
-    score_path = os.path.join(output_dir, "tairo_summary_with_scores.csv")
+    # --- Per-run timestamped files (never overwritten) -----------------------
+    from datetime import datetime
+    ts = datetime.now().strftime("%Y%m%d-%H%M")
+    unique_conds = list(dict.fromkeys(name for name, _ in conditions))  # ordered, deduped
+    cond_slug = "-".join(unique_conds) if len(unique_conds) <= 3 else "all-conditions"
+    seed_slug = "-".join(str(s) for s in seeds)
+    run_stem  = f"run_{cond_slug}_seed{seed_slug}_{ts}"
+    run_ep_path    = os.path.join(output_dir, f"{run_stem}_episode_results.csv")
+    run_step_path  = os.path.join(output_dir, f"{run_stem}_step_logs.csv")
+    run_score_path = os.path.join(output_dir, f"{run_stem}_summary.csv")
 
-    episode_df.to_csv(ep_path, index=False)
-    step_df.to_csv(step_path, index=False)
-    score_df.to_csv(score_path, index=False)
+    episode_df.to_csv(run_ep_path,    index=False)
+    step_df.to_csv(run_step_path,     index=False)
+    score_df.to_csv(run_score_path,   index=False)
+
+    # --- Running combined CSVs (append, dedupe on key columns) ---------------
+    EPISODE_KEYS = ["method", "condition", "attack_level", "seed"]
+    SUMMARY_KEYS = ["method", "condition", "attack_level"]
+
+    combined_ep_path    = os.path.join(output_dir, "combined_episode_results.csv")
+    combined_step_path  = os.path.join(output_dir, "combined_step_logs.csv")
+    combined_score_path = os.path.join(output_dir, "combined_summary.csv")
+
+    def _append_deduped(new_df: pd.DataFrame, path: str, keys: list) -> pd.DataFrame:
+        if os.path.exists(path):
+            existing = pd.read_csv(path)
+            merged = pd.concat([existing, new_df], ignore_index=True)
+            merged = merged.drop_duplicates(subset=keys, keep="last")
+        else:
+            merged = new_df
+        merged.to_csv(path, index=False)
+        return merged
+
+    combined_ep    = _append_deduped(episode_df, combined_ep_path,    EPISODE_KEYS)
+    _append_deduped(step_df,    combined_step_path,  EPISODE_KEYS + ["timestep"])
+    combined_score = _append_deduped(score_df,    combined_score_path, SUMMARY_KEYS)
 
     print(f"\nDone. Results saved to {output_dir}/")
-    print(f"  {ep_path}")
-    print(f"  {step_path}")
-    print(f"  {score_path}")
+    print(f"  Run files:      {run_ep_path}")
+    print(f"                  {run_step_path}")
+    print(f"                  {run_score_path}")
+    print(f"  Combined files: {combined_ep_path} ({len(combined_ep)} episode rows total)")
+    print(f"                  {combined_score_path} ({len(combined_score)} summary rows total)")
 
     # Print quick summary table
     display_cols = [
