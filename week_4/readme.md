@@ -22,7 +22,7 @@ The environment is **FetchReach-v4**: a 7-DOF robotic arm must move its gripper 
 
 | Controller | What it is |
 |---|---|
-| **Random** | Picks random actions every step — our dumbest baseline |
+| **Random** | Picks random actions every step — most simple baseline |
 | **Rule-Based** | A hand-coded proportional controller: computes the direction to the goal and moves toward it |
 | **SAC+HER** | A neural network trained with Soft Actor-Critic + Hindsight Experience Replay — our learned AI policy |
 
