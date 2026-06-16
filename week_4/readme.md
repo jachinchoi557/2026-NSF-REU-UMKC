@@ -116,7 +116,7 @@ Under sensor noise, SAC+HER's score drops more than Rule-Based's — confirming 
 
 ---
 
-## The Core Finding for Your Presentation
+## The Core Finding for our Presentation
 
 > **SAC+HER is the fastest and most capable controller under clean conditions, but sensor noise is its specific vulnerability. Rule-Based is slower but more robust to perception attacks because it doesn't rely on a learned representation of the world.**
 
@@ -124,9 +124,9 @@ This is actually a meaningful research insight: learned policies that internaliz
 
 ---
 
-## What the Videos Show
+## Videos
 
-| Video | What to look for |
+| Video | Highlights |
 |---|---|
 | `clean_seed0` | Arm moves directly and smoothly to the target in ~2 steps, then holds position |
 | `sensor_noise_0.05_seed2` | Arm oscillates — keeps approaching then veering away as corrupted readings mislead it |
