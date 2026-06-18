@@ -164,7 +164,7 @@ def run_benchmark(
 
                 # Choose policy_fn for SAC-based methods
                 policy_fn = sac_policy if (
-                    method in {"sac", "sac_her"} and sac_policy is not None
+                    method in {"sac", "sac_her", "sac_plain"} and sac_policy is not None
                 ) else None
 
                 result, step_df = run_episode(

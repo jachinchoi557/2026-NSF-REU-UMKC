@@ -141,7 +141,7 @@ def run_episode(
             action = random_policy(env, policy_obs)
         elif method == "rule_based":
             action = rule_based_reach_policy(env, policy_obs)
-        elif method in {"sac", "sac_her", "recovery_aware_sac_her"} and model is not None:
+        elif method in {"sac", "sac_her", "sac_plain", "recovery_aware_sac_her"} and model is not None:
             action, _ = model.predict(policy_obs, deterministic=True)
         else:
             base = method.removesuffix("_recovery")
@@ -149,7 +149,7 @@ def run_episode(
                 action = random_policy(env, policy_obs)
             elif base == "rule_based":
                 action = rule_based_reach_policy(env, policy_obs)
-            elif base in {"sac", "sac_her"} and model is not None:
+            elif base in {"sac", "sac_her", "sac_plain"} and model is not None:
                 action, _ = model.predict(policy_obs, deterministic=True)
             else:
                 action = rule_based_reach_policy(env, policy_obs)

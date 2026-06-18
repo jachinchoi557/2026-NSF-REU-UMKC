@@ -1,13 +1,45 @@
-Method,Condition,Attack Level,Success Rate,Avg Reward,Final Distance,Trust Score
-Random,action_noise,0.05,0.0,-50.0,0.1591852878322912,0.1063467232815656
-Random,clean,0.0,0.0,-50.0,0.2622836864975899,0.4094881218258288
-Random,sensor_noise,0.01,0.6666666666666666,-46.333333333333336,0.1442719505031173,0.3440299255184208
-Random,sensor_noise,0.05,0.3333333333333333,-49.666666666666664,0.3375878624921407,0.158692706216086
-Rule-Based,action_noise,0.05,1.0,-6.333333333333333,0.0110835877868248,0.6384185027083573
-Rule-Based,clean,0.0,1.0,-5.666666666666667,0.0079563763377911,0.9957241616932524
-Rule-Based,sensor_noise,0.01,1.0,-6.0,0.0112969175239968,0.6369978743411019
-Rule-Based,sensor_noise,0.05,1.0,-9.0,0.0338269719219734,0.5940718160981672
-SAC+HER,action_noise,0.05,1.0,-1.6666666666666667,0.0154216732323617,0.5839046615714101
-SAC+HER,clean,0.0,1.0,-1.6666666666666667,0.0167159701765403,0.9406397687738628
-SAC+HER,sensor_noise,0.01,1.0,-2.0,0.0158112172950767,0.5263848417563444
-SAC+HER,sensor_noise,0.05,1.0,-28.666666666666668,0.0435949448833984,0.4833842754202487
+Method,Condition,Attack Level,Success Rate,Avg Reward,Final Distance,Recovery Triggered Rate,Trustworthiness Score
+Random,Action Noise,0.05,0.0,-50.0,0.1592,,0.1063
+Random,Action Scale,0.5,0.0,-50.0,0.3159,,0.0115
+Random,Clean,0.0,0.0,-50.0,0.2623,,0.4095
+Random,Sensor Noise,0.01,0.667,-46.33,0.1443,,0.344
+Random,Sensor Noise,0.05,0.333,-49.67,0.3376,,0.1587
+Random,Target Shift,0.03,0.0,-50.0,0.2733,,0.0569
+Random + Recovery,Action Noise,0.05,0.0,-50.0,0.1987,0.28,0.3305
+Random + Recovery,Action Scale,0.5,0.0,-50.0,0.2634,0.98,0.4815
+Random + Recovery,Sensor Noise,0.01,0.333,-49.67,0.2357,0.093,0.4243
+Random + Recovery,Sensor Noise,0.05,0.333,-48.33,0.1868,0.24,0.5669
+Random + Recovery,Target Shift,0.03,0.0,-50.0,0.2705,0.413,0.3054
+Rule-Based,Action Noise,0.05,1.0,-6.33,0.0111,,0.6384
+Rule-Based,Action Scale,0.5,1.0,-3.67,0.0077,,0.6455
+Rule-Based,Clean,0.0,1.0,-5.67,0.008,,0.9957
+Rule-Based,Sensor Noise,0.01,1.0,-6.0,0.0113,,0.637
+Rule-Based,Sensor Noise,0.05,1.0,-9.0,0.0338,,0.5941
+Rule-Based,Target Shift,0.03,1.0,-5.67,0.0171,,0.6366
+Rule-Based + Recovery,Action Noise,0.05,1.0,-5.67,0.0107,0.067,0.8722
+Rule-Based + Recovery,Action Scale,0.5,1.0,-7.67,0.0077,0.153,0.9957
+Rule-Based + Recovery,Sensor Noise,0.01,1.0,-6.0,0.0125,0.0,0.6364
+Rule-Based + Recovery,Sensor Noise,0.05,1.0,-15.33,0.0276,0.027,0.9454
+Rule-Based + Recovery,Target Shift,0.03,1.0,-5.67,0.0102,0.0,0.6391
+SAC (no HER),Action Noise,0.05,0.0,-50.0,0.1317,,0.0983
+SAC (no HER),Action Scale,0.5,0.0,-50.0,0.1262,,0.0443
+SAC (no HER),Clean,0.0,0.0,-50.0,0.1279,,0.4569
+SAC (no HER),Sensor Noise,0.01,0.0,-50.0,0.1189,,0.1094
+SAC (no HER),Sensor Noise,0.05,0.0,-50.0,0.12,,0.0179
+SAC (no HER),Target Shift,0.03,0.0,-50.0,0.1197,,0.1154
+SAC (no HER) + Recovery,Action Noise,0.05,0.0,-50.0,0.128,0.067,0.4563
+SAC (no HER) + Recovery,Action Scale,0.5,0.0,-50.0,0.1363,0.627,0.4746
+SAC (no HER) + Recovery,Sensor Noise,0.01,0.0,-50.0,0.1224,0.0,0.0789
+SAC (no HER) + Recovery,Sensor Noise,0.05,0.333,-47.0,0.1308,0.16,0.4989
+SAC (no HER) + Recovery,Target Shift,0.03,0.0,-50.0,0.1284,0.0,0.1046
+SAC+HER,Action Noise,0.05,1.0,-1.67,0.0154,,0.5839
+SAC+HER,Action Scale,0.5,1.0,-1.67,0.0168,,0.5884
+SAC+HER,Clean,0.0,1.0,-1.67,0.0167,,0.9406
+SAC+HER,Sensor Noise,0.01,1.0,-2.0,0.0158,,0.5264
+SAC+HER,Sensor Noise,0.05,1.0,-28.67,0.0436,,0.4834
+SAC+HER,Target Shift,0.03,1.0,-1.67,0.0233,,0.5545
+SAC+HER + Recovery,Action Noise,0.05,1.0,-2.0,0.0168,0.08,0.9323
+SAC+HER + Recovery,Action Scale,0.5,1.0,-4.0,0.0166,0.7,0.9909
+SAC+HER + Recovery,Sensor Noise,0.01,1.0,-3.0,0.024,0.0,0.5214
+SAC+HER + Recovery,Sensor Noise,0.05,1.0,-34.0,0.0348,0.06,0.8346
+SAC+HER + Recovery,Target Shift,0.03,1.0,-1.67,0.0219,0.0,0.5555
