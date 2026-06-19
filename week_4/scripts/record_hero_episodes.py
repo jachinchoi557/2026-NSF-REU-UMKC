@@ -23,12 +23,12 @@ from stable_baselines3 import SAC
 
 from attacks.sensor_attacks import add_sensor_noise
 from attacks.action_attacks import manipulate_action
-from config import MAX_EPISODE_STEPS, RESULT_DIR
+from config import MAX_EPISODE_STEPS, MODELS_DIR, OUTPUTS_DIR
 
 gym.register_envs(gymnasium_robotics)
 
-VIDEO_DIR = os.path.join(RESULT_DIR, "videos")
-MODEL_PATH = os.path.join(RESULT_DIR, "sac_her_fetchreach_model")
+VIDEO_DIR  = os.path.join(OUTPUTS_DIR, "videos")
+MODEL_PATH = os.path.join(MODELS_DIR,  "sac_her_fetchreach_model")
 
 EPISODES = [
     dict(label="clean_seed0",              seed=0, condition="clean",        attack_level=0.0),

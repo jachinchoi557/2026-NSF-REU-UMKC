@@ -39,7 +39,7 @@ import sys
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import RESULT_DIR
+from config import CANONICAL_DIR, OUTPUTS_DIR
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -84,9 +84,9 @@ PRETTY_CONDITION = {
 
 def parse_args():
     p = argparse.ArgumentParser(description="Regenerate week4_results_table.csv")
-    p.add_argument("--summary",  default=os.path.join(RESULT_DIR, "combined_summary.csv"))
-    p.add_argument("--steplogs", default=os.path.join(RESULT_DIR, "combined_step_logs.csv"))
-    p.add_argument("--output",   default=os.path.join(RESULT_DIR, "week4_results_table.csv"))
+    p.add_argument("--summary",  default=os.path.join(CANONICAL_DIR, "combined_summary.csv"))
+    p.add_argument("--steplogs", default=os.path.join(CANONICAL_DIR, "combined_step_logs.csv"))
+    p.add_argument("--output",   default=os.path.join(OUTPUTS_DIR,   "week4_results_table.csv"))
     return p.parse_args()
 
 

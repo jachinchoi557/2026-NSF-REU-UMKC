@@ -35,7 +35,7 @@ import pandas as pd
 # Ensure project root is on path when called from any working directory
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config import GYM_AVAILABLE, RANDOM_SEEDS, RESULT_DIR, SB3_AVAILABLE
+from config import CANONICAL_DIR, GYM_AVAILABLE, RANDOM_SEEDS, RESULT_DIR, SB3_AVAILABLE
 from envs.fetchreach_env import make_env
 from evaluation.episode_runner import run_episode
 from evaluation.metrics import add_trustworthiness_scores, summarize_results
@@ -99,7 +99,13 @@ def parse_args():
         "--output-dir",
         default=RESULT_DIR,
         metavar="DIR",
-        help="Directory for output CSVs (default: %(default)s).",
+        help="Directory for timestamped per-run CSVs (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--canonical-dir",
+        default=CANONICAL_DIR,
+        metavar="DIR",
+        help="Directory for combined_*.csv canonical files (default: %(default)s).",
     )
     return parser.parse_args()
 
@@ -135,6 +141,7 @@ def run_benchmark(
     model=None,
     include_recovery: bool = True,
     output_dir: str = RESULT_DIR,
+    canonical_dir: str = CANONICAL_DIR,
 ) -> None:
     if not GYM_AVAILABLE:
         print(
@@ -144,6 +151,7 @@ def run_benchmark(
         sys.exit(1)
 
     os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(canonical_dir, exist_ok=True)
 
     all_results = []
     all_steps = []
@@ -224,9 +232,9 @@ def run_benchmark(
     EPISODE_KEYS = ["method", "condition", "attack_level", "seed"]
     SUMMARY_KEYS = ["method", "condition", "attack_level"]
 
-    combined_ep_path    = os.path.join(output_dir, "combined_episode_results.csv")
-    combined_step_path  = os.path.join(output_dir, "combined_step_logs.csv")
-    combined_score_path = os.path.join(output_dir, "combined_summary.csv")
+    combined_ep_path    = os.path.join(canonical_dir, "combined_episode_results.csv")
+    combined_step_path  = os.path.join(canonical_dir, "combined_step_logs.csv")
+    combined_score_path = os.path.join(canonical_dir, "combined_summary.csv")
 
     def _append_deduped(new_df: pd.DataFrame, path: str, keys: list) -> pd.DataFrame:
         if os.path.exists(path):
@@ -242,12 +250,12 @@ def run_benchmark(
     _append_deduped(step_df,    combined_step_path,  EPISODE_KEYS + ["timestep"])
     combined_score = _append_deduped(score_df,    combined_score_path, SUMMARY_KEYS)
 
-    print(f"\nDone. Results saved to {output_dir}/")
-    print(f"  Run files:      {run_ep_path}")
-    print(f"                  {run_step_path}")
-    print(f"                  {run_score_path}")
-    print(f"  Combined files: {combined_ep_path} ({len(combined_ep)} episode rows total)")
-    print(f"                  {combined_score_path} ({len(combined_score)} summary rows total)")
+    print(f"\nDone.")
+    print(f"  Run files (per-run):  {run_ep_path}")
+    print(f"                        {run_step_path}")
+    print(f"                        {run_score_path}")
+    print(f"  Canonical combined:   {combined_ep_path} ({len(combined_ep)} episode rows total)")
+    print(f"                        {combined_score_path} ({len(combined_score)} summary rows total)")
 
     # Print quick summary table
     display_cols = [
@@ -274,6 +282,7 @@ def main():
         model=model,
         include_recovery=not args.no_recovery,
         output_dir=args.output_dir,
+        canonical_dir=args.canonical_dir,
     )
 
 

@@ -16,9 +16,15 @@ import numpy as np
 RANDOM_SEEDS = [0, 1, 2]
 ENV_ID = "FetchReach-v4"
 MAX_EPISODE_STEPS = 50
-RESULT_DIR = "tairo_results"
+RESULT_DIR      = "tairo_results"
+MODELS_DIR      = os.path.join(RESULT_DIR, "models")
+CANONICAL_DIR   = os.path.join(RESULT_DIR, "canonical")
+OUTPUTS_DIR     = os.path.join(RESULT_DIR, "outputs")
+EXPERIMENTS_DIR = os.path.join(RESULT_DIR, "experiments")
+ARCHIVE_DIR     = os.path.join(RESULT_DIR, "archive")
 
-os.makedirs(RESULT_DIR, exist_ok=True)
+for _d in (RESULT_DIR, MODELS_DIR, CANONICAL_DIR, OUTPUTS_DIR, EXPERIMENTS_DIR, ARCHIVE_DIR):
+    os.makedirs(_d, exist_ok=True)
 
 # Global seeding — set once at import time so results are reproducible
 np.random.seed(0)

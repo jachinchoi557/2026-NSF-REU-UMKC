@@ -27,10 +27,10 @@ import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 
-from config import RESULT_DIR
+from config import OUTPUTS_DIR
 
-TABLE_PATH = os.path.join(RESULT_DIR, "week4_results_table.csv")
-OUT_PATH   = os.path.join(RESULT_DIR, "week4_results_plot.png")
+TABLE_PATH = os.path.join(OUTPUTS_DIR, "week4_results_table.csv")
+OUT_PATH   = os.path.join(OUTPUTS_DIR, "week4_results_plot.png")
 
 # ── Condition ordering ─────────────────────────────────────────────────────────
 COND_LABEL = {
