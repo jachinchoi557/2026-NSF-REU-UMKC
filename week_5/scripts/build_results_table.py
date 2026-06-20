@@ -4,8 +4,7 @@ Build week5_results_table.csv from combined_summary.csv and combined_step_logs.c
 Scope
 -----
 Methods    : random, rule_based, sac_her, sac_plain  (and _recovery counterparts)
-Conditions : sensor_dropout, sensor_bias,
-             goal_spoof_immediate, goal_spoof_midep  (Week 5 new attacks)
+Conditions : all Week 5 attack conditions plus clean and action attacks
 
 Columns in output
 -----------------
@@ -45,8 +44,11 @@ INCLUDE_METHODS = [
     "sac_her",             "sac_her_recovery",
 ]
 
-# Week 5 new attack conditions
 INCLUDE_CONDITIONS = {
+    "clean",
+    "action_delay",
+    "action_reverse",
+    "action_clipping",
     "sensor_dropout",
     "sensor_bias",
     "goal_spoof_immediate",
@@ -65,10 +67,14 @@ PRETTY_METHOD = {
 }
 
 PRETTY_CONDITION = {
-    "sensor_dropout":      "Sensor Dropout",
-    "sensor_bias":         "Sensor Bias",
+    "clean":                "Clean",
+    "action_delay":         "Action Delay",
+    "action_reverse":       "Action Reverse",
+    "action_clipping":      "Action Clipping",
+    "sensor_dropout":       "Sensor Dropout",
+    "sensor_bias":          "Sensor Bias",
     "goal_spoof_immediate": "Goal Spoof (t=0)",
-    "goal_spoof_midep":    "Goal Spoof (t=20)",
+    "goal_spoof_midep":     "Goal Spoof (t=20)",
 }
 
 

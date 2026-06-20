@@ -217,6 +217,8 @@ def run_episode(
             executed_action = manipulate_action(intended_action, "action_reverse")
         elif condition == "action_delay":
             executed_action = manipulate_action(intended_action, "action_delay", previous_action=previous_action)
+        elif condition == "action_clipping":
+            executed_action = manipulate_action(intended_action, "action_clipping", clip_value=attack_level)
 
         # -- Recovery (TAIRO C5) -------------------------------------------------
         recovery_triggered = False

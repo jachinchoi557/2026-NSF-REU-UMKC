@@ -33,6 +33,10 @@ OUT_PATH   = os.path.join(OUTPUTS_DIR, "week5_results_plot.png")
 
 # ── Condition ordering ─────────────────────────────────────────────────────────
 COND_LABEL = {
+    ("Clean",             0.00): "Clean",
+    ("Action Delay",      0.00): "Action\nDelay",
+    ("Action Reverse",    0.00): "Action\nReverse",
+    ("Action Clipping",   0.30): "Action\nClip 0.30",
     ("Sensor Dropout",    0.00): "Sensor\nDropout",
     ("Sensor Bias",       0.10): "Sensor\nBias 0.10",
     ("Goal Spoof (t=0)",  0.10): "Goal Spoof\n(t=0)",

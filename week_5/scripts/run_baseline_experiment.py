@@ -63,6 +63,8 @@ ALL_CONDITIONS = [
     ("action_noise",        0.05),
     ("action_scale",        0.50),
     ("action_delay",        0.00),
+    ("action_reverse",      0.00),
+    ("action_clipping",     0.30),
     ("target_shift",        0.03),
     # Week 5 new attack conditions
     ("sensor_dropout",      0.00),   # zeros obs["observation"]; magnitude unused
@@ -120,6 +122,11 @@ def parse_args():
         help="Disable recovery-aware variants for attack conditions.",
     )
     parser.add_argument(
+        "--include-clean-recovery",
+        action="store_true",
+        help="Also run _recovery method variants on the clean condition.",
+    )
+    parser.add_argument(
         "--output-dir",
         default=EXPERIMENTS_DIR,
         metavar="DIR",
@@ -167,6 +174,7 @@ def run_benchmark(
     methods: List[str],
     model=None,
     include_recovery: bool = True,
+    include_clean_recovery: bool = False,
     n_episodes: int = 1,
     output_dir: str = EXPERIMENTS_DIR,
     canonical_dir: str = CANONICAL_DIR,
@@ -224,8 +232,8 @@ def run_benchmark(
                     step_df["episode_idx"] = ep_idx
                     all_steps.append(step_df)
 
-                    # Recovery-aware variant for non-clean conditions
-                    if include_recovery and condition != "clean":
+                    # Recovery-aware variant for non-clean conditions (optionally clean too)
+                    if include_recovery and (condition != "clean" or include_clean_recovery):
                         recovery_method = method + "_recovery"
                         result_r, step_df_r = run_episode(
                             env=env,
@@ -326,6 +334,7 @@ def main():
         methods=args.methods,
         model=model,
         include_recovery=not args.no_recovery,
+        include_clean_recovery=args.include_clean_recovery,
         n_episodes=args.n_episodes,
         output_dir=args.output_dir,
         canonical_dir=args.canonical_dir,

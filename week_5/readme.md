@@ -29,7 +29,7 @@ The environment is **FetchReach-v4**: a 7-DOF robotic arm must move its gripper 
 
 Both SAC models were trained for 20,000 timesteps with identical hyperparameters (lr=1e-3, buffer=100k, batch=256, γ=0.95, τ=0.05). The only difference is the HER replay buffer. SAC+HER was confirmed working at 100% success before the attack sweep. SAC (no HER) achieved 0% success — see findings below for why this is expected and is itself the result.
 
-Each controller was also tested in a **recovery-aware variant** (e.g. `sac_her_recovery`) that applies conservative action damping when an attack is detected.
+Each controller was also tested in a **recovery-aware variant** (e.g. `sac_her_recovery`) that replans using a rule-based proportional controller when an attack is detected (Week 5 redesign — replaces the 0.5× damping used in Week 4).
 
 ---
 
@@ -94,13 +94,28 @@ At benchmark levels, SAC+HER shows zero degradation across all three action-leve
 
 Each controller was paired with a recovery-aware variant that applies 0.5× action damping when either the action diverges from the intended command by more than 0.15 or the robot is more than 0.25 m from the goal. Recovery is confirmed to trigger — 914 of 2,700 recovery-method steps fired it.
 
-**The finding is unflattering:** for controllers that were already succeeding (Rule-Based, SAC+HER), recovery damping mostly slows them down without improving outcomes, resulting in lower average reward in most conditions. The current damping strategy is too aggressive — it fires at the start of any episode (distance > 0.25 m) and halves actions that were already on track. Recovery design is a Week 5 item.
+**Week 4 finding (damping strategy):** Recovery damping was too aggressive — it fired at episode start and halved actions that were already on track. Week 5 replaced this with a 3-signal detector (action divergence, jerk, 5-step distance trend) that triggers rule-based replanning using the raw unattacked observation, re-anchoring toward the true goal even under goal-spoofing attacks.
 
 ---
 
 ## Trustworthiness Scores
 
-We computed composite TAIRO trustworthiness scores (0–1) using five component metrics (reliability, robustness, cyber-resilience, safety, recovery) weighted equally at 0.20 each:
+We computed composite TAIRO trustworthiness scores (0–1) using five component metrics with two weighting schemes:
+
+**Equal weights (trustworthiness_score_equal):** each component at 0.20.
+
+**Argued weights (trustworthiness_score_weighted — TAIRO framework):**
+| Component | Weight |
+|---|---|
+| C1 Reliability (perception & state understanding) | 0.10 |
+| C2 Robustness (uncertainty & failure detection) | 0.20 |
+| C3 Cyber Resilience (cybersecurity-aware reasoning) | 0.25 |
+| C4 Safety (RL-based adaptation) | 0.15 |
+| C5 Recovery (failure recovery & safety control) | 0.30 |
+
+Week 4 results below used the equal-weight scheme for direct comparison across conditions.
+
+
 
 | Controller | Clean | Sensor Noise σ=0.01 | Sensor Noise σ=0.05 | Action Noise σ=0.05 |
 |---|---|---|---|---|
