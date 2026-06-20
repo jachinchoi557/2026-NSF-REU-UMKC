@@ -63,22 +63,18 @@ LABEL_MAP = {
 # ---------------------------------------------------------------------------
 # Method order and palette
 # ---------------------------------------------------------------------------
-METHOD_ORDER = [
-    "Random",
-    "Random + Recovery",
-    "Rule-Based",
-    "Rule-Based + Recovery",
+FOCUS_METHODS = [
     "SAC+HER",
     "SAC+HER + Recovery",
-    "SAC (no HER)",
-    "SAC (no HER) + Recovery",
+]
+
+METHOD_ORDER = [
+    "SAC+HER",
+    "SAC+HER + Recovery",
 ]
 
 BASE_PALETTE = {
-    "Random":       "#4472C4",
-    "Rule-Based":   "#70AD47",
-    "SAC+HER":      "#E05C2A",
-    "SAC (no HER)": "#7F7F7F",
+    "SAC+HER": "#E05C2A",
 }
 
 
@@ -101,6 +97,7 @@ for _m, _c in BASE_PALETTE.items():
 
 def load_data(path: str) -> pd.DataFrame:
     df = pd.read_csv(path)
+    df = df[df["Method"].isin(FOCUS_METHODS)].copy()
     df["Condition"] = df["Condition"].replace(COND_RENAME)
     df["is_recovery"] = df["Method"].str.contains("Recovery")
     df["base_method"] = df["Method"].str.replace(" + Recovery", "", regex=False).str.strip()
@@ -153,66 +150,31 @@ def bar_style(ax) -> None:
 def panel_a(df: pd.DataFrame, out_dir: str) -> None:
     set_style()
 
-    main_methods = [m for m in METHOD_ORDER if "no HER" not in m]
-    sac_methods  = [m for m in METHOD_ORDER if "no HER" in m]
-
-    main_df = df[df["Method"].isin(main_methods)].copy()
-    sac_df  = df[df["Method"].isin(sac_methods)].copy()
-
-    fig, (ax_main, ax_sac) = plt.subplots(
-        1, 2, figsize=(18, 6),
-        gridspec_kw={"width_ratios": [6, 1], "wspace": 0.04},
-    )
+    fig, ax = plt.subplots(figsize=(14, 6))
 
     sns.barplot(
-        data=main_df,
+        data=df,
         x="Condition", y="Success Rate",
-        hue="Method", hue_order=main_methods,
-        palette={m: METHOD_PALETTE[m] for m in main_methods},
+        hue="Method", hue_order=METHOD_ORDER,
+        palette=METHOD_PALETTE,
         order=COND_ORDER,
         errorbar=None,
-        ax=ax_main,
+        ax=ax,
     )
-    ax_main.set_ylim(0, 1.05)
-    ax_main.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0%}"))
-    ax_main.set_ylabel("Success Rate", fontsize=10)
-    fix_xlabels(ax_main)
-    bar_style(ax_main)
+    ax.set_ylim(0, 1.05)
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0%}"))
+    ax.set_ylabel("Success Rate", fontsize=10)
+    fix_xlabels(ax)
+    bar_style(ax)
 
-    sns.barplot(
-        data=sac_df,
-        x="Condition", y="Success Rate",
-        hue="Method", hue_order=sac_methods,
-        palette={m: METHOD_PALETTE[m] for m in sac_methods},
-        order=COND_ORDER,
-        errorbar=None,
-        ax=ax_sac,
-    )
-    ax_sac.set_ylim(0, 1.05)
-    ax_sac.yaxis.set_visible(False)
-    ax_sac.set_title("SAC (no HER)\nablation", fontsize=9, pad=4)
-    ax_sac.spines["left"].set_linestyle("--")
-    ax_sac.spines["left"].set_color("grey")
-    ax_sac.spines["left"].set_visible(True)
-    ax_sac.set_xticklabels([], rotation=0)
-    ax_sac.tick_params(axis="x", length=0)
-    ax_sac.set_xlabel("")
-    if ax_sac.get_legend():
-        ax_sac.get_legend().remove()
-    bar_style(ax_sac)
-
-    # Remove seaborn auto-legend from main axes
-    if ax_main.get_legend():
-        ax_main.get_legend().remove()
-
-    # Single legend above main axes
-    handles = [mpatches.Patch(color=METHOD_PALETTE[m], label=m) for m in main_methods]
-    ax_main.legend(
-        handles=handles,
+    if ax.get_legend():
+        ax.get_legend().remove()
+    ax.legend(
+        handles=[mpatches.Patch(color=METHOD_PALETTE[m], label=m) for m in METHOD_ORDER],
         loc="lower center", bbox_to_anchor=(0.5, 1.02),
-        ncol=3, frameon=False, fontsize=8.5,
+        ncol=2, frameon=False, fontsize=9,
     )
-    fig.suptitle("Panel A — Success Rate by Method & Condition", fontsize=12, y=1.10)
+    fig.suptitle("Panel A — Success Rate by Method & Condition", fontsize=12, y=1.08)
 
     plt.savefig(os.path.join(out_dir, "panel_a_success_rate.png"),
                 dpi=150, bbox_inches="tight")
@@ -227,65 +189,32 @@ def panel_a(df: pd.DataFrame, out_dir: str) -> None:
 def panel_b(df: pd.DataFrame, out_dir: str) -> None:
     set_style()
 
-    main_methods = [m for m in METHOD_ORDER if "no HER" not in m]
-    sac_methods  = [m for m in METHOD_ORDER if "no HER" in m]
-
-    main_df = df[df["Method"].isin(main_methods)].copy()
-    sac_df  = df[df["Method"].isin(sac_methods)].copy()
-
     data_min = df["Avg Reward"].min()
 
-    fig, (ax_main, ax_sac) = plt.subplots(
-        1, 2, figsize=(18, 6),
-        gridspec_kw={"width_ratios": [6, 1], "wspace": 0.04},
-    )
+    fig, ax = plt.subplots(figsize=(14, 6))
 
     sns.barplot(
-        data=main_df,
+        data=df,
         x="Condition", y="Avg Reward",
-        hue="Method", hue_order=main_methods,
-        palette={m: METHOD_PALETTE[m] for m in main_methods},
+        hue="Method", hue_order=METHOD_ORDER,
+        palette=METHOD_PALETTE,
         order=COND_ORDER,
         errorbar=None,
-        ax=ax_main,
+        ax=ax,
     )
-    ax_main.set_ylim(bottom=data_min - 2)
-    ax_main.set_ylabel("Avg Reward", fontsize=10)
-    fix_xlabels(ax_main)
-    bar_style(ax_main)
+    ax.set_ylim(bottom=data_min - 2)
+    ax.set_ylabel("Avg Reward", fontsize=10)
+    fix_xlabels(ax)
+    bar_style(ax)
 
-    sns.barplot(
-        data=sac_df,
-        x="Condition", y="Avg Reward",
-        hue="Method", hue_order=sac_methods,
-        palette={m: METHOD_PALETTE[m] for m in sac_methods},
-        order=COND_ORDER,
-        errorbar=None,
-        ax=ax_sac,
-    )
-    ax_sac.set_ylim(bottom=data_min - 2)
-    ax_sac.yaxis.set_visible(False)
-    ax_sac.set_title("SAC (no HER)\nablation", fontsize=9, pad=4)
-    ax_sac.spines["left"].set_linestyle("--")
-    ax_sac.spines["left"].set_color("grey")
-    ax_sac.spines["left"].set_visible(True)
-    ax_sac.set_xticklabels([], rotation=0)
-    ax_sac.tick_params(axis="x", length=0)
-    ax_sac.set_xlabel("")
-    if ax_sac.get_legend():
-        ax_sac.get_legend().remove()
-    bar_style(ax_sac)
-
-    if ax_main.get_legend():
-        ax_main.get_legend().remove()
-
-    handles = [mpatches.Patch(color=METHOD_PALETTE[m], label=m) for m in main_methods]
-    ax_main.legend(
-        handles=handles,
+    if ax.get_legend():
+        ax.get_legend().remove()
+    ax.legend(
+        handles=[mpatches.Patch(color=METHOD_PALETTE[m], label=m) for m in METHOD_ORDER],
         loc="lower center", bbox_to_anchor=(0.5, 1.02),
-        ncol=3, frameon=False, fontsize=8.5,
+        ncol=2, frameon=False, fontsize=9,
     )
-    fig.suptitle("Panel B — Avg Reward by Method & Condition", fontsize=12, y=1.10)
+    fig.suptitle("Panel B — Avg Reward by Method & Condition", fontsize=12, y=1.08)
 
     plt.savefig(os.path.join(out_dir, "panel_b_avg_reward.png"),
                 dpi=150, bbox_inches="tight")
@@ -300,12 +229,7 @@ def panel_b(df: pd.DataFrame, out_dir: str) -> None:
 def panel_c(df: pd.DataFrame, out_dir: str) -> None:
     set_style()
 
-    rec_hue_order = [
-        "Random + Recovery",
-        "Rule-Based + Recovery",
-        "SAC+HER + Recovery",
-        "SAC (no HER) + Recovery",
-    ]
+    rec_hue_order = ["SAC+HER + Recovery"]
     rec_df = df[
         df["is_recovery"] & df["Recovery Triggered Rate"].notna()
     ].copy()
@@ -336,7 +260,7 @@ def panel_c(df: pd.DataFrame, out_dir: str) -> None:
     ax.legend(
         handles=handles,
         loc="lower center", bbox_to_anchor=(0.5, 1.06),
-        ncol=2, frameon=False, fontsize=8.5,
+        ncol=1, frameon=False, fontsize=8.5,
     )
 
     plt.tight_layout(pad=1.5)
@@ -353,12 +277,7 @@ def panel_c(df: pd.DataFrame, out_dir: str) -> None:
 def panel_d(df: pd.DataFrame, out_dir: str) -> None:
     set_style()
 
-    d_methods = [
-        "Rule-Based",
-        "Rule-Based + Recovery",
-        "SAC+HER",
-        "SAC+HER + Recovery",
-    ]
+    d_methods = ["SAC+HER", "SAC+HER + Recovery"]
 
     trust_df = df[df["Method"].isin(d_methods)].copy()
     trust_long = trust_df.melt(
@@ -387,7 +306,7 @@ def panel_d(df: pd.DataFrame, out_dir: str) -> None:
     g = sns.FacetGrid(
         trust_long,
         col="Method",
-        col_order=d_methods,
+        col_order=["SAC+HER", "SAC+HER + Recovery"],
         height=4.5, aspect=1.0,
         sharey=True,
     )
