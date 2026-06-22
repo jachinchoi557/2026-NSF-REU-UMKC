@@ -43,5 +43,9 @@ class SACHerPolicy:
         action, _ = self.model.predict(obs, deterministic=self.deterministic)
         return action
 
+    def predict(self, obs: Dict[str, np.ndarray], deterministic: bool = True):
+        """Mirror SB3's model.predict() so record_agent can call policy.predict()."""
+        return self.model.predict(obs, deterministic=deterministic)
+
     def __repr__(self) -> str:
         return f"SACHerPolicy(model={self.model.__class__.__name__}, deterministic={self.deterministic})"
