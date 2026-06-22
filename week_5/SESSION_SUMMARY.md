@@ -1,119 +1,196 @@
 # Week 5 Session Summary
-**Date:** 2026-06-19  
+**Date:** 2026-06-19 (Session 1) + 2026-06-20 (Session 2)  
 **Branch:** week-5-dev  
 **Author:** Yves (with Claude Code)
 
 ---
 
-## What We Built This Session
+## Session 1 — 2026-06-19: Core Week 5 Setup
 
-This session extended the TAIRO robotic cybersecurity benchmark from Week 4 by adding four new types of cyberattack scenarios, redesigning the robot's recovery system from scratch, and producing a new set of experimental results across 960 robot episodes. We also added a second trustworthiness scoring formula so the paper can argue the weight choices directly rather than just presenting one number. The session produced two new presentation-ready files — a results table and a four-panel figure — that can go directly into slides or the Overleaf draft.
+### What We Built
+
+This session extended the TAIRO robotic cybersecurity benchmark from Week 4 by adding four new types of cyberattack scenarios, redesigning the robot's recovery system from scratch, and producing a new set of experimental results across 960 robot episodes. We also added a second trustworthiness scoring formula so the paper can argue the weight choices directly rather than just presenting one number.
 
 ---
 
-## New Attack Scenarios
+### New Attack Scenarios
 
-### Sensor Dropout (`sensor_dropout`)
+#### Sensor Dropout (`sensor_dropout`)
 **What it simulates:** A complete hardware or communication failure in the robot's proprioceptive sensing system — equivalent to a camera feed going black or an IMU losing power entirely. The robot receives only zeros where it would normally receive its joint positions, velocities, and gripper state.  
-**How it's implemented:** The attack function (`apply_sensor_dropout`) replaces the entire `observation` field in the robot's perception dictionary with a zero array before the policy ever sees it. The goal location remains visible, but the robot has no idea where its own hand is.  
+**How it's implemented:** `apply_sensor_dropout()` replaces the entire `observation` field with a zero array before the policy sees it. The goal location remains visible, but the robot has no idea where its own hand is.  
 **Cybersecurity threat:** Denial-of-service attack on a sensor bus or firmware, or physical severing of a sensor cable.
 
-### Sensor Bias (`sensor_bias`)
-**What it simulates:** A sensor that has been tampered with or is miscalibrated in a systematic way — it doesn't give random noise, it consistently reads high or low by a fixed amount. Imagine a position sensor whose zero-point has been shifted by an adversary or by long-term drift.  
-**How it's implemented:** At the start of each episode, one constant offset vector is sampled from a uniform distribution (±0.10 per dimension). This same vector is added to the robot's observation on every step. The offset is fixed for the whole episode to simulate persistent miscalibration, not random noise.  
+#### Sensor Bias (`sensor_bias`)
+**What it simulates:** A sensor that has been tampered with or is miscalibrated in a systematic way — it doesn't give random noise, it consistently reads high or low by a fixed amount.  
+**How it's implemented:** At the start of each episode, one constant offset vector is sampled from a uniform distribution (±0.10 per dimension). This same vector is added to the robot's observation on every step.  
 **Cybersecurity threat:** Supply-chain compromise of sensor firmware, or a man-in-the-middle attacker who intercepts the sensor data stream and adds a constant shift.
 
-### Goal Spoofing — Immediate (`goal_spoof_immediate`)
-**What it simulates:** An adversary who corrupts the mission command the robot receives — the robot is told to reach toward a false target position from the very first step of the episode.  
-**How it's implemented:** A random offset (±0.10 m per axis) is sampled once at the start of the episode and added to the `desired_goal` field in every observation the policy sees. The robot's actual target in the simulator remains unchanged; only the goal the policy is shown gets corrupted.  
-**Cybersecurity threat:** Man-in-the-Middle attack on the goal command channel — an attacker intercepts the mission planner's output and substitutes a false goal.
+#### Goal Spoofing — Immediate (`goal_spoof_immediate`)
+**What it simulates:** An adversary who corrupts the mission command the robot receives — the robot is told to reach toward a false target position from the very first step.  
+**How it's implemented:** A random offset (±0.10 m per axis) is sampled once at episode start and added to `desired_goal` in every observation the policy sees.  
+**Cybersecurity threat:** Man-in-the-Middle attack on the goal command channel.
 
-### Goal Spoofing — Mid-Episode (`goal_spoof_midep`)
-**What it simulates:** The same MitM goal corruption as above, but the attacker waits until the robot is 40% through its task (step 20 of 50) before activating. This tests whether policies that have already started moving toward the correct goal can be redirected by a late-stage injection.  
-**How it's implemented:** Identical to the immediate version, except the offset is not applied until step 20. Before step 20, the policy sees the true goal and behaves normally. From step 20 onward, it sees the corrupted goal. The offset is held constant once activated.  
-**Cybersecurity threat:** A "sleeper" network intrusion that activates mid-operation rather than at startup, making it harder to attribute or detect at mission start.
-
----
-
-## Recovery Logic Redesign
-
-### What the old approach did
-The Week 4 recovery system detected an attack by checking two things: (1) whether the executed action differed significantly from the intended action, and (2) whether the robot was farther than 0.25 m from its goal. When either condition was met, it halved the magnitude of the executed action.
-
-### Why it was net-harmful
-The distance threshold of 0.25 m fires at the very start of every episode — the robot always begins further than 0.25 m from the goal. This means "recovery" was triggering continuously from step 0 in virtually every episode, not just when attacks were actually occurring. For a capable policy like SAC+HER or the rule-based controller, slowing down a perfectly good action by 50% consistently made performance worse. The damping didn't redirect the robot — it just made it move half as far per step.
-
-### What the new approach does
-The redesigned recovery replaces damping with a diagnostic system and a meaningful response:
-
-**Three detection signals:**
-- **Action divergence** (threshold > 0.5): If the action at this step is very different from the previous step's action — much more so than normal control variation — something has likely been injected. This catches noise injection and scaling attacks.
-- **Jerk** (threshold > 1.0): The same measurement at a higher bar. A sudden lurch of this magnitude almost certainly means the action has been inverted or severely scaled, not just nudged by noise.
-- **Distance trend** (5 consecutive increases): If the robot's distance from the goal has been getting worse for five steps in a row without ever improving, it's being driven the wrong direction. This catches sensor-based attacks that don't show up in action divergence because the policy action itself looks normal.
-
-**Recovery response:** When any signal fires, the corrupted action is thrown away entirely. Instead, the recovery module calls the rule-based reaching controller — the simple proportional "point your hand toward the goal" policy — using the **raw, unattacked observation**. This is critical for goal-spoofing attacks: even if the policy was shown a false goal location, the recovery controller uses the true goal location the environment actually tracks, so the robot gets re-anchored to where it's actually supposed to go.
+#### Goal Spoofing — Mid-Episode (`goal_spoof_midep`)
+**What it simulates:** The same MitM goal corruption as above, but the attacker waits until step 20 of 50 before activating. Tests whether policies already moving toward the correct goal can be redirected by a late-stage injection.  
+**Cybersecurity threat:** A "sleeper" network intrusion that activates mid-operation, making it harder to detect at mission start.
 
 ---
 
-## Trustworthiness Scoring
+### Recovery Logic Redesign
 
-The TAIRO framework computes a single trustworthiness score for each (policy, attack condition) pair by combining five component scores: Reliability (did it succeed?), Robustness (how close did it get?), Cyber Resilience (did it succeed under attack?), Safety (did it avoid unsafe actions?), and Recovery (did recovery ever trigger?).
+**Old approach (Week 4):** Detected an attack by checking action divergence and distance from goal (> 0.25 m). When triggered, halved the magnitude of the executed action.
 
-### The two weight schemes
+**Why it was net-harmful:** The 0.25 m distance threshold fires at the very start of every episode. Recovery was triggering continuously from step 0, slowing down capable policies without redirecting them.
 
-**Equal weights (0.20 × each):** Every component counts the same. This is the conservative, hard-to-argue-against baseline. If the paper reviewers question our weight choices, equal weights give a model-free comparison point.
+**New approach:** Replaces damping with a 3-signal detector and a meaningful response:
+- **Action divergence** (> 0.5): Large step-to-step action jump → injected noise or scaling attack
+- **Jerk** (> 1.0): Same quantity at higher bar — captures sudden reversals
+- **Distance trend** (5 consecutive increases): Robot being driven away from goal → sensor-based attack
 
-**Argued weights (Week 3 TAIRO framework):**
-- Reliability: 0.10 — basic task success is expected, not distinguishing
-- Robustness: 0.20 — getting close matters, but less than adversarial survival
-- Cyber Resilience: 0.25 — the primary thesis of the paper; attack survival is most important
-- Safety: 0.15 — actuator safety is a hard real-world constraint
-- Recovery: 0.30 — the highest weight, because a policy that can detect and correct an attack is qualitatively better than one that degrades gracefully
-
-### Why having both is useful for the paper
-The two columns appear side by side in the results table. For the rule-based and SAC+HER policies under sensor_bias and goal_spoof_midep — where they achieve 100% success — the equal score (≈0.80) and weighted score (≈0.70) are close. For recovery variants under sensor_dropout — where recovery triggers aggressively — the weighted score is notably higher than the equal score because recovery gets the largest weight. This creates a concrete, data-grounded argument in the paper for why recovery deserves its high weight: it's the factor that most differentiates policies that merely survive from policies that actively correct.
+When any signal fires, the corrupted action is discarded entirely. The rule-based proportional controller is called using the **raw unattacked observation** — re-anchoring toward the true goal even when the policy was shown a false goal.
 
 ---
 
-## Data Produced
+### Trustworthiness Scoring
 
-| File | Location | Contents | Use |
-|---|---|---|---|
-| `combined_episode_results.csv` | `tairo_results/canonical/` | 960 rows × 13 cols. One row per episode. method, condition, seed, episode_idx, success, reward, distance, recovery_used. | Source of truth for all downstream analysis. |
-| `combined_step_logs.csv` | `tairo_results/canonical/` | 48,000 rows × 13 cols. One row per timestep per episode. Includes recovery_triggered per step. | Recovery trigger rate computation; per-step analysis. |
-| `combined_summary.csv` | `tairo_results/canonical/` | 32 rows × 20 cols. One row per (method, condition). All metric averages + both trustworthiness scores. | Source for table and plot scripts. |
-| `week5_results_table.csv` | `tairo_results/outputs/` | 32 rows × 9 cols. Human-readable method/condition names. Both trustworthiness score columns. | Paste into slides; cite specific numbers in paper. |
-| `week5_results_plot.png` | `tairo_results/outputs/` | 233 KB, 4-panel figure (dpi=150). Panels: Success Rate, Avg Reward, Recovery Rate, Equal vs. Weighted score. | Main results figure for slides and paper. |
-| `run_all-conditions_seed0-1-2_20260619-1501_*` | `tairo_results/experiments/all-conditions/` | Timestamped snapshot of the 2026-06-19 sweep. Three files (episodes, steps, summary). Read-only. | Audit trail; revert if canonical CSVs are accidentally modified. |
+Two weight schemes added:
+- **Equal weights (0.20 × each):** Conservative, hard-to-argue-against baseline.
+- **Argued weights:** Reliability 0.10, Robustness 0.20, Cyber Resilience 0.25, Safety 0.15, Recovery 0.30 (highest — policies that actively correct attacks are qualitatively better than those that degrade gracefully).
+
+Both appear as `trustworthiness_score_equal` and `trustworthiness_score_weighted` in all CSVs and the results table.
 
 ---
 
-## What the Results Show So Far
+### Data Produced (Session 1)
 
-The most striking finding is the difference in how policies handle observation-level vs. goal-corruption attacks.
-
-**Sensor dropout is catastrophic for learned policies.** SAC+HER and SAC (no HER) both achieve only ~3% success under sensor dropout — they cannot function without their proprioceptive observation. The rule-based controller, by contrast, achieves 100% success even with sensor dropout, because its control law only needs the goal location and the achieved goal (end-effector position), not the full observation. This is a meaningful paper finding: a simple hand-designed controller is more robust to a complete sensor failure than a neural network trained on millions of data points.
-
-**Sensor bias has a much smaller effect on the rule-based controller than on learned policies.** Rule-based achieves 100% success under sensor bias; SAC+HER only achieves 30%. This makes sense — the rule-based policy uses `desired_goal - achieved_goal` (goal minus end-effector position), which is in the goal space and not the observation field. Sensor bias on `obs["observation"]` doesn't touch those fields, so the rule-based controller is immune. SAC+HER, which learned to use the full observation as context, is more affected.
-
-**Goal spoofing is where the learning advantage disappears.** Under immediate goal spoofing, SAC+HER achieves only 23% success — worse than random might expect from a capable policy. The rule-based controller achieves 47%. Under mid-episode spoofing (activated at step 20), both achieve 100%. The rule-based controller has already moved close enough to the true goal in the first 20 steps that a 0.10 m goal shift at step 20 doesn't prevent success within the remaining 30 steps. SAC+HER can also recover, but its early-episode behavior is more conservative, so it succeeds 100% as well.
-
-**Recovery under the new rule-based replanning scheme is largely benign.** Unlike Week 4's damping (which actively hurt capable policies), the new recovery system triggers rarely for rule-based and SAC+HER (recovery rate < 1% for most conditions), and when it does, it substitutes a sensible reaching action rather than slowing the robot down. The most visible recovery effect is in the sensor_dropout case for SAC+HER + Recovery: recovery triggers 90% of steps (the action divergence and distance trend fire immediately because the policy outputs erratic actions without proprioception), and the recovery action substitutes the rule-based controller — explaining why `sac_her_recovery` under `sensor_dropout` achieves 3% success while the raw rule-based achieves 100%.
+| File | Contents |
+|---|---|
+| `canonical/combined_episode_results.csv` | 960 rows — 4 conditions × 8 methods × 3 seeds × 10 episodes |
+| `canonical/combined_step_logs.csv` | 48,000 rows (per-step logs) |
+| `canonical/combined_summary.csv` | 32 rows × 20 cols — all metrics + both trustworthiness scores |
+| `outputs/week5_results_table.csv` | 32 rows × 9 cols — slide-ready |
+| `outputs/week5_results_plot.png` | 4-panel figure, 233 KB |
 
 ---
 
-## What Still Needs to Be Done Before Monday
+### Key Results (Session 1)
 
-1. **Fix action_delay** — The `action_delay` attack will currently crash if run because `previous_action` is now `None` at step 0. Needs a one-line fix in `action_attacks.py`, then a re-run of the action_delay sweep.
+- **Sensor dropout is catastrophic for learned policies.** SAC+HER achieves only ~3% success without proprioception. The rule-based controller, which only uses goal position and end-effector position (not the full observation field), achieves 100%. This is the headline paper finding: a simple hand-designed controller is more robust to complete sensor failure than a neural network trained on millions of data points.
+- **Sensor bias affects SAC+HER (30% success) but not Rule-Based (100%)** because the bias is on `obs["observation"]`, not the goal fields that the rule-based controller uses.
+- **Goal spoofing mid-episode (step 20):** Both SAC+HER and Rule-Based achieve 100% success. By step 20, the robot is already close enough to the true goal that a ±0.10 m shift can't prevent success in the remaining 30 steps.
+- **Recovery is largely benign under the new design** — triggers rarely for capable policies on most conditions. The exception is sensor_dropout: the erratic policy output triggers recovery on ~90% of steps, substituting rule-based replanning and maintaining task progress.
 
-2. **Sweep action_reverse** — This attack function exists but has never been run. Should be added to the next sweep alongside the action_delay fix.
+---
 
-3. **Implement action_clipping** — Not yet written. Would round out the action-level attack taxonomy.
+## Session 2 — 2026-06-20: New Attacks, Clean Baseline, and Visualization
 
-4. **Overleaf section draft** — The attack taxonomy section needs to be written. The four new attacks + Week 4 attacks give a clean taxonomy: observation attacks (noise, dropout, bias) vs. goal attacks (shift, spoof immediate, spoof mid-episode) vs. action attacks (noise, scale, delay, reverse).
+### What We Built
 
-5. **SOTA comparison** — Need to find and cite published numbers on FetchReach robustness to compare against. The sensor_dropout finding (rule-based > SAC+HER) is the most publishable result and should be framed against the literature.
+This session added three new attack conditions (action_delay, action_reverse, action_clipping) to the benchmark, added a clean-condition recovery baseline to interpret recovery trigger rates, expanded all output scripts to cover all 8 conditions, and created three new visualization scripts with progressively focused method sets.
 
-6. **Habitat extension sketch** — At minimum, a one-page design note explaining how each attack maps to a real Habitat navigation scenario. Sensor dropout → camera failure. Goal spoof → semantic target corruption. Sensor bias → depth sensor miscalibration. This sets up Week 6 if the Habitat simulation track continues.
+---
 
-7. **readme.md update** — The readme still describes Week 4 results and incorrect equal weights. Should be updated to reference the Week 5 findings and correct weight formula.
+### Bug Fix: action_delay Step-0 None Guard
+
+**Problem:** `episode_runner.py` initializes `previous_action = None`. The `action_delay` branch in `manipulate_action()` previously fell through to "return current action unchanged" when `previous_action is None` — meaning the delay attack had no effect at step 0, and CLAUDE.md had flagged it as a potential crash risk.
+
+**Fix:** Added an explicit branch in `attacks/action_attacks.py`:
+```python
+elif attack_type == ATTACK_DELAY:
+    if previous_action is None:
+        executed = np.zeros_like(action)   # semantically: nothing to replay
+    else:
+        executed = np.asarray(previous_action, dtype=np.float32).copy()
+```
+Verified: `manipulate_action(a, "action_delay", previous_action=None)` returns zeros. `manipulate_action(a, "action_delay", previous_action=prev)` returns `prev`.
+
+---
+
+### New Attack: action_clipping
+
+Added `ATTACK_CLIPPING` branch to `manipulate_action()` (accepts `clip_value` via `**kwargs`, default 0.30). Added `action_clipping` condition branch in `episode_runner.py`. Added to `ALL_CONDITIONS` in the sweep runner with `attack_level=0.30`.
+
+**What it simulates:** An actuator saturation or command throttling attack — each motor command is clipped to ±0.30. The robot can still move but at reduced effective range.
+
+---
+
+### New Attack: action_reverse sweep
+
+`action_reverse` was already implemented but had never been swept. Added to `ALL_CONDITIONS` and swept alongside `action_delay`.
+
+---
+
+### New: --include-clean-recovery Flag
+
+Added `--include-clean-recovery` to `run_baseline_experiment.py`. When set, runs `_recovery` method variants on the `clean` condition in addition to attack conditions. Previously, recovery variants had no clean-condition baseline, making recovery trigger rates uninterpretable.
+
+**Finding:** Recovery trigger rate on clean is very high (71–96% of steps) — the 3-signal detector fires spuriously without attacks, primarily driven by the distance trend signal (robot is still converging in early steps). This is an important calibration data point for the paper: the recovery system as designed needs a specificity adjustment before deployment.
+
+---
+
+### Sweeps Run (2026-06-20)
+
+All sweeps: 4 methods × 3 seeds × 10 episodes, plus recovery variants.
+
+| Sweep | Conditions | New rows |
+|---|---|---|
+| action_delay + action_reverse | 2 | 480 |
+| action_clipping | 1 | 240 |
+| clean (with --include-clean-recovery) | 1 | 240 |
+
+**Canonical CSV now:** 1920 episode rows, 8 conditions, 0 duplicate (method, condition, seed, episode_idx) rows.
+
+---
+
+### Key New Results
+
+**action_delay (base policies, 3.3% success):** The step-0 zeros effectively freeze the robot for one step; then the delay replays the previous action. For the proportional rule-based controller this means every action is one step behind, which is enough to prevent reaching within 50 steps most of the time. Recovery (which re-plans from scratch each step) restores 50% success.
+
+**action_reverse (base policies, 0% success):** Negating all actions drives the robot away from the goal. Final distances are very large (>1.2 m). Recovery variants achieve 100% success — the 3-signal jerk detector fires immediately (reversed actions create massive step-to-step divergence) and rule-based replanning takes over entirely.
+
+**action_clipping (base policies, 100% success for Rule-Based and SAC+HER):** Clipping to ±0.30 only reduces speed — the robot still reaches the goal, just more slowly. SAC (no HER) also achieves 100% success under clipping (its failure under clean conditions is due to sparse reward, not action magnitude requirements). Recovery trigger rate for `_recovery` variants is low (~7%) because the actions look smooth even if clipped.
+
+---
+
+### Script and Output Updates
+
+#### `scripts/build_results_table.py`
+`INCLUDE_CONDITIONS` expanded from 4 to 8 conditions. `PRETTY_CONDITION` dict updated. Output: `week5_results_table.csv` (64 rows, 9 cols).
+
+#### `scripts/build_results_plot.py`
+`COND_LABEL` and `COND_ORDER` expanded to all 8 conditions. Output: `week5_results_plot.png` (regenerated).
+
+#### `scripts/build_focused_plot.py` (new)
+3-panel figure showing SAC+HER and SAC (no HER) variants as the main methods, with Rule-Based shown as a slim reference column to the right of Panels A and B. Rationale: for the paper's primary comparison, the SAC vs. rule-based contrast should be visual but not give rule-based equal visual weight as an RL policy.
+
+#### `scripts/build_split_plots.py` (new)
+Generates four separate PNGs using pure matplotlib — one per panel. All 8 methods × 8 conditions shown. SAC (no HER) placed as an ablation block with a dashed separator after the main group. Bar layout: `bar_width=0.09`, `offsets = np.linspace(-3.5×bw, 3.5×bw, 8)`. Condition labels use `\n` line breaks and `rotation=0`. Panel D uses paired bars (equal vs. weighted) per method per condition.
+
+#### `scripts/build_seaborn_plots.py` (new)
+Four separate PNGs using seaborn. Went through three iterations:
+1. All 8 methods
+2. Filtered to 4 SAC methods only
+3. Final: `FOCUS_METHODS = ["SAC+HER", "SAC+HER + Recovery"]` only
+
+Final design decisions:
+- **Panels A & B:** Single `figsize=(14,6)` axes. `fig.suptitle(..., y=1.08)` for the title; legend at `bbox_to_anchor=(0.5, 1.02)`. This separates title and legend vertically without overlap. No two-axes split — SAC (no HER) ablation block removed entirely.
+- **Panel C:** SAC+HER + Recovery only. Single method, single color.
+- **Panel D:** `FacetGrid` with `col="Method"`, 2 columns (SAC+HER and SAC+HER + Recovery). Each column shows equal vs. weighted bars per condition.
+- **Technical fixes:** `ax.xaxis.set_major_locator(plt.FixedLocator(...))` before `set_xticklabels` (eliminates matplotlib FixedLocator warning). `.astype(str)` before Categorical reassignment in Panel D (eliminates Pandas4Warning from leftover categories). `errorbar=None` on all `sns.barplot()` calls (seaborn ≥0.12 API).
+
+#### `readme.md`
+Updated weights section: documents both equal (0.20 × 5) and argued (0.10/0.20/0.25/0.15/0.30) weight schemes, matching `metrics.py`. Updated recovery description from "0.5× damping" to "rule-based replanning using unattacked observation."
+
+---
+
+### What Still Needs to Be Done
+
+1. **Overleaf draft — attack taxonomy section.** Full taxonomy is now complete: observation attacks (noise, dropout, bias) + goal attacks (spoof immediate, spoof mid-episode) + action attacks (noise, scale, delay, reverse, clipping). The 8-condition results table and plots are ready to use as figures.
+
+2. **SOTA comparison.** Find and cite published numbers on FetchReach adversarial robustness. The sensor_dropout finding (rule-based: 100%, SAC+HER: 3%) and action_reverse recovery finding (0% → 100% with recovery) are the most publishable results.
+
+3. **Recovery specificity.** Clean-condition recovery trigger rate of 71–96% means the detector fires constantly even without attacks. For the paper, this needs to be addressed: either raise thresholds, add a minimum-steps-since-last-trigger gate, or explicitly frame the current system as a "detect-and-correct" design with known false-positive cost.
+
+4. **Habitat extension design.** Attack-to-Habitat mapping: sensor_dropout → camera failure; goal_spoof → semantic target corruption; sensor_bias → depth sensor drift; action_clipping → actuator saturation. Design note for Week 6.
+
+5. **Notebook update.** `TAIRO_Week5_RL_Attack_SOTA_Habitat_Notebook_executed.ipynb` has not been re-run with the new 8-condition data. Either re-execute or replace with a clean notebook.

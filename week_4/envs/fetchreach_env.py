@@ -12,11 +12,12 @@ import numpy as np
 from config import ENV_ID, GYM_AVAILABLE, MAX_EPISODE_STEPS
 
 
-def make_env(seed: int = 0):
+def make_env(seed: int = 0, rgb_mode:bool = False):
     """Create and return a seeded FetchReach-v4 Gymnasium environment.
 
     Args:
         seed: Random seed passed to env.reset().
+        rgb_mode: T/F depending on recording needs
 
     Returns:
         Gymnasium environment instance.
@@ -30,7 +31,8 @@ def make_env(seed: int = 0):
             "Install with: pip install gymnasium gymnasium-robotics mujoco"
         )
     import gymnasium as gym  # deferred so import errors are caught by config.py
-    env = gym.make(ENV_ID, max_episode_steps=MAX_EPISODE_STEPS)
+    render_mode = "rgb_array" if rgb_mode else None
+    env = gym.make(ENV_ID, max_episode_steps=MAX_EPISODE_STEPS, render_mode=render_mode)
     env.reset(seed=seed)
     return env
 
