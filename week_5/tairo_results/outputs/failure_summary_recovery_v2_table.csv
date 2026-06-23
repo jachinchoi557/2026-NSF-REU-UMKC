@@ -1,0 +1,9 @@
+condition,success_rate,avg_reward,avg_final_distance,recovery_pct,avg_first_recovery_step
+clean,100.0,-1.82,0.0181,0.0,N/A
+sensor_dropout,79.0,-19.30,0.0779,100.0,3.8
+sensor_bias,6.0,-46.79,0.1518,65.0,7.8
+goal_spoof_immediate,8.0,-45.82,0.0934,45.0,9.8
+goal_spoof_midep,7.0,-28.70,0.0938,1.0,24.0
+action_delay,100.0,-3.68,0.0228,10.0,4.4
+action_reverse,0.0,-50.00,0.2259,100.0,3.6
+action_clipping,100.0,-7.07,0.0183,0.0,N/A
